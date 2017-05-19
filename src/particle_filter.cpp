@@ -7,7 +7,6 @@
 
 #include <random>
 #include <iostream>
-#include <algorithm>
 
 #include "particle_filter.h"
 
@@ -29,8 +28,6 @@ static LandmarkObs trans(const double &theta,
   return {id, px + std::cos(theta) * pn - std::sin(theta) * po, py + std::sin(theta) * pn + std::cos(theta) * po};
 };
 
-static std::default_random_engine gen_pf;
-
 ///
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
@@ -46,6 +43,9 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   const double stddev_x = std[0];
   const double stddev_y = std[1];
   const double stddev_theta = std[2];
+
+  std::random_device rd;
+  std::mt19937 gen_pf(rd());
   std::normal_distribution<double> dist_x(0, stddev_x), dist_y(0, stddev_y), dist_theta(0, stddev_theta);
 
   for (int i = 0; i < num_particles; ++i) {
@@ -65,6 +65,9 @@ void ParticleFilter::prediction(double delta_t, double std_pos[], double velocit
   const double stddev_x = std_pos[0];
   const double stddev_y = std_pos[1];
   const double stddev_theta = std_pos[2];
+
+  std::random_device rd;
+  std::mt19937 gen_pf(rd());
   std::normal_distribution<double> dist_x(0, stddev_x), dist_y(0, stddev_y), dist_theta(0, stddev_theta);
 
   for (int i = 0; i < num_particles; ++i) {
@@ -183,7 +186,10 @@ void ParticleFilter::resample() {
     weights.emplace_back(particle.weight);
   }
 
+  std::random_device rd;
+  std::mt19937 gen_pf(rd());
   std::discrete_distribution<> dist(weights.begin(), weights.end());
+
   std::vector<Particle> new_particles;
   for (size_t i = 0; i < particles.size(); ++i) {
     new_particles.emplace_back(particles[dist(gen_pf)]);
