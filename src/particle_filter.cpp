@@ -6,10 +6,7 @@
  */
 
 #include <random>
-#include <algorithm>
 #include <iostream>
-#include <numeric>
-#include <map>
 
 #include "particle_filter.h"
 
@@ -40,18 +37,21 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
   //   x, y, theta and their uncertainties from GPS) and all weights to 1.
   // Add random Gaussian noise to each particle.
   // NOTE: Consult particle_filter.h for more information about this method (and others in this file).
-  num_particles = 100;
+
+  num_particles = 100; //<< 100 particles were enough for me to pass the filter
   particles.resize(num_particles);
   weights.resize(num_particles, 1.0);
 
   const double stddev_x = std[0];
   const double stddev_y = std[1];
   const double stddev_theta = std[2];
-  std::normal_distribution<double> dist_x(x, stddev_x), dist_y(y, stddev_y), dist_theta(theta, stddev_theta);
+  std::normal_distribution<double> dist_x(0, stddev_x), dist_y(0, stddev_y), dist_theta(0, stddev_theta);
 
   for (int i = 0; i < num_particles; ++i) {
-    particles[i] = {i, dist_x(gen_pf), dist_y(gen_pf), normalize(dist_theta(gen_pf)), weights[i]};
+    particles[i] = {i, x + dist_x(gen_pf), y + dist_y(gen_pf), normalize(theta + dist_theta(gen_pf)), weights[i]};
   }
+
+  is_initialized = true;
 
 }
 
@@ -125,6 +125,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
   //   3.33. Note that you'll need to switch the minus sign in that equation to a plus to account
   //   for the fact that the map's y-axis actually points downwards.)
   //   http://planning.cs.uiuc.edu/node99.html
+
   for (auto &particle : particles) {
     // landmark association
 
@@ -156,16 +157,16 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
     for (auto &observation_to_map : observations_to_map) {
       for (auto &pred : predicted) {
         if (pred.id == observation_to_map.id) {
-
+          // Log weights for stability
           particle.weight += -std::log(2.0 * M_PI * std_landmark[0] * std_landmark[1])
               - 0.5 * (std::pow((pred.x - observation_to_map.x) / std_landmark[0], 2)
                   + std::pow((pred.y - observation_to_map.y) / std_landmark[1], 2));
-          break;
         }
       }
     }
 
-    //std::cout << "particle.weight: " << particle.weight << std::endl;
+    // Inverse to compatible with main.cpp
+    particle.weight = std::exp(particle.weight);
 
   }
 
@@ -175,16 +176,15 @@ void ParticleFilter::resample() {
   // TODO: Resample particles with replacement with probability proportional to their weight.
   // NOTE: You may find std::discrete_distribution helpful here.
   //   http://en.cppreference.com/w/cpp/numeric/random/discrete_distribution
+
   std::vector<double> weights;
   for (auto &particle : particles) {
     weights.emplace_back(particle.weight);
   }
 
   std::discrete_distribution<double> dist(weights.begin(), weights.end());
-
   std::vector<Particle> new_particles;
-
-  for (size_t i = 0; i < new_particles.size(); ++i) {
+  for (size_t i = 0; i < particles.size(); ++i) {
     new_particles.emplace_back(particles[dist(gen_pf)]);
   }
 
