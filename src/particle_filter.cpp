@@ -7,6 +7,7 @@
 
 #include <random>
 #include <iostream>
+#include <algorithm>
 
 #include "particle_filter.h"
 
